@@ -71,24 +71,11 @@ pub struct Found {
 /// - report 2: rotation, three `i16`
 /// - report 3: buttons, a little-endian bitmask
 pub fn apply_report(state: &mut DeviceState, report: &[u8]) -> bool {
-    let axis = |i: usize| i16::from_le_bytes([report[1 + 2 * i], report[2 + 2 * i]]);
     let before = (state.axes, state.buttons);
     match report.first() {
-        Some(1) if report.len() >= 13 => {
-            for i in 0..6 {
-                state.axes[i] = axis(i);
-            }
-        }
-        Some(1) if report.len() >= 7 => {
-            for i in 0..3 {
-                state.axes[i] = axis(i);
-            }
-        }
-        Some(2) if report.len() >= 7 => {
-            for i in 0..3 {
-                state.axes[3 + i] = axis(i);
-            }
-        }
+        Some(1) if report.len() >= 13 => read_axes(&mut state.axes, &report[1..13]),
+        Some(1) if report.len() >= 7 => read_axes(&mut state.axes[..3], &report[1..7]),
+        Some(2) if report.len() >= 7 => read_axes(&mut state.axes[3..], &report[1..7]),
         Some(3) if report.len() >= 2 => {
             let mut bits = [0u8; 4];
             let n = (report.len() - 1).min(4);
@@ -98,6 +85,14 @@ pub fn apply_report(state: &mut DeviceState, report: &[u8]) -> bool {
         _ => {}
     }
     before != (state.axes, state.buttons)
+}
+
+/// Fills `axes` from consecutive little-endian `i16` values in `bytes`.
+fn read_axes(axes: &mut [i16], bytes: &[u8]) {
+    let (pairs, _) = bytes.as_chunks::<2>();
+    for (axis, pair) in axes.iter_mut().zip(pairs) {
+        *axis = i16::from_le_bytes(*pair);
+    }
 }
 
 /// Parses `HID_ID=0003:0000256F:0000C635` into (vendor, product).
