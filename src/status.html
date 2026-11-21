@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spacemouse-onshape</title>
+<style>
+  :root { --bg: #fafafa; --fg: #1d1d1f; --muted: #6e6e73; --card: #fff; --line: #e3e3e6; --ok: #1a7f37; --bad: #c62828; --bar: #2f6fde; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161618; --fg: #ececf0; --muted: #9a9aa2; --card: #1f1f22; --line: #2e2e33; --ok: #4ac26b; --bad: #ff6b6b; --bar: #6ea0ff; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; }
+  .axes { display: grid; grid-template-columns: 64px 1fr 56px; gap: 6px 10px; align-items: center; font-variant-numeric: tabular-nums; }
+  .track { position: relative; height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  .fill { position: absolute; top: 0; bottom: 0; background: var(--bar); }
+  .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--muted); }
+  .num { text-align: right; color: var(--muted); }
+  ol { margin: 0; padding-left: 20px; } li { margin: 4px 0; }
+  code { font-size: 13px; background: var(--line); padding: 1px 5px; border-radius: 4px; }
+  a { color: var(--bar); }
+</style>
+</head>
+<body>
+<main>
+  <h1>spacemouse-onshape</h1>
+  <p class="sub">The certificate works if you can read this page. <span id="ver"></span></p>
+
+  <section>
+    <h2>Device</h2>
+    <p id="device">…</p>
+    <div class="axes" id="axes"></div>
+    <p id="buttons" class="sub" style="margin:12px 0 0"></p>
+  </section>
+
+  <section>
+    <h2>Connected pages</h2>
+    <p id="sessions">…</p>
+  </section>
+
+  <section>
+    <h2>Setup</h2>
+    <ol>
+      <li>Onshape only looks for a 3D mouse when it believes it runs on Windows or macOS, which a tiny browser extension fixes. In Chrome, open <code>chrome://extensions</code>, turn on Developer mode, choose <b>Load unpacked</b> and select <code>~/.local/share/spacemouse-onshape/extension</code>. In Firefox, or with Tampermonkey or Violentmonkey, install the <a href="/onshape-spacemouse.user.js">userscript</a> instead.</li>
+      <li>Open or reload an Onshape document, click into the 3D view, and move the cap.</li>
+      <li>Move the cap here: the bars show the motion after the dead zone, in the screen's frame. Pushing right should fill <b>pan-x</b> positively, lifting should fill <b>pan-y</b> positively, and pulling toward you should fill <b>zoom</b> positively.</li>
+    </ol>
+  </section>
+</main>
+<script>
+const names = ["pan_x", "pan_y", "zoom", "pitch", "yaw", "roll"];
+const axes = document.getElementById("axes");
+const rows = names.map(n => {
+  const label = document.createElement("div"); label.textContent = n.replace("_", "-");
+  const track = document.createElement("div"); track.className = "track";
+  const mid = document.createElement("div"); mid.className = "mid";
+  const fill = document.createElement("div"); fill.className = "fill";
+  track.append(fill, mid);
+  const num = document.createElement("div"); num.className = "num";
+  axes.append(label, track, num);
+  return { fill, num };
+});
+function setText(id, text, cls) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = cls || "";
+}
+async function poll() {
+  try {
+    const s = await (await fetch("/status.json", { cache: "no-store" })).json();
+    document.getElementById("ver").textContent = "Version " + s.version + ".";
+    const d = s.device;
+    if (d.connected) setText("device", "Connected: " + d.name, "ok");
+    else setText("device", "Not connected" + (d.problem ? ": " + d.problem : ""), "bad");
+    names.forEach((n, i) => {
+      const v = d.camera[n];
+      const r = rows[i];
+      const pct = Math.min(Math.abs(v), 1) * 50;
+      r.fill.style.left = (v >= 0 ? 50 : 50 - pct) + "%";
+      r.fill.style.width = pct + "%";
+      r.num.textContent = v.toFixed(2);
+    });
+    const pressed = [];
+    for (let b = 0; b < 32; b++) if (d.buttons & (1 << b)) pressed.push(b + 1);
+    document.getElementById("buttons").textContent = "Buttons pressed: " + (pressed.length ? pressed.join(", ") : "none");
+    if (s.sessions.length === 0) setText("sessions", "None yet. Open an Onshape document with the userscript installed.");
+    else setText("sessions", s.sessions.map(x => (x.client || "unknown") + (x.focus ? " (focused)" : "") + (x.subscribed ? "" : " (connecting)")).join(", "));
+  } catch (e) {
+    setText("device", "The bridge stopped.", "bad");
+  }
+  setTimeout(poll, 100);
+}
+poll();
+</script>
+</body>
+</html>

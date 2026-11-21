@@ -1,0 +1,8 @@
+# Lets the logged-in user read 3Dconnexion 3D mice through hidraw (spacemouse-onshape, SolidCraft).
+# Install: sudo cp 70-spacemouse.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+# USB, by 3Dconnexion's vendor id:
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", TAG+="uaccess"
+# Bluetooth, where idVendor isn't set:
+SUBSYSTEM=="hidraw", KERNELS=="0005:256F:*", TAG+="uaccess"
+# Older devices sold under Logitech's vendor id (SpaceNavigator, SpacePilot, SpaceExplorer, ...):
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c603|c605|c606|c621|c623|c625|c626|c627|c628|c629|c62b", TAG+="uaccess"

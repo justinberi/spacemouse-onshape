@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Onshape 3D mouse on Linux",
+  "description": "Lets Onshape connect to spacemouse-onshape, a 3Dconnexion SpaceMouse bridge for Linux.",
+  "version": "0.1.0",
+  "content_scripts": [
+    {
+      "matches": ["https://cad.onshape.com/*", "https://*.onshape.com/*"],
+      "js": ["platform.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=3Dconnexion SpaceMouse bridge for Onshape
+
+[Service]
+ExecStart=/usr/bin/spacemouse-onshape serve --trust-browsers
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+    udevadm control --reload >/dev/null 2>&1 || true
+    udevadm trigger --subsystem-match=hidraw --action=change >/dev/null 2>&1 || true
+    systemctl --global enable spacemouse-onshape.service >/dev/null 2>&1 || true
+    echo "spacemouse-onshape starts at your next login; to start it now, run (as yourself, not root):"
+    echo "    systemctl --user start spacemouse-onshape"
+    echo "Then add the browser extension once; https://127.51.68.120:8181 shows how."
+fi

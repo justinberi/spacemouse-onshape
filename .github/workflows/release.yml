@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # Built on the oldest supported Ubuntu, so the package runs on older glibc too.
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-22.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --release
+      - run: cargo install cargo-deb --locked
+      - run: cargo deb
+      - name: Package
+        run: |
+          name="spacemouse-onshape-${GITHUB_REF_NAME}-${{ matrix.arch }}-linux"
+          mkdir -p "dist/$name"
+          cp target/release/spacemouse-onshape README.md LICENSE-MIT LICENSE-APACHE "dist/$name/"
+          cp -r extension packaging "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          cp target/debian/*.deb dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.arch }}
+          path: |
+            dist/*.tar.gz
+            dist/*.deb
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

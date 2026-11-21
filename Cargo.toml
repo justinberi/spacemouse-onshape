@@ -1,0 +1,55 @@
+[package]
+name = "spacemouse-onshape"
+version = "0.1.0"
+edition = "2024"
+description = "Use a 3Dconnexion SpaceMouse with Onshape on Linux: a 3DxWare-compatible navigation bridge"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+keywords = ["spacemouse", "3dconnexion", "onshape", "cad", "linux"]
+categories = ["command-line-utilities", "hardware-support"]
+exclude = ["/target"]
+repository = "https://github.com/justinberi/spacemouse-onshape"
+
+[dependencies]
+anyhow = "1.0.104"
+axum = { version = "0.8.9", features = ["ws"] }
+axum-server = { version = "0.9.2", default-features = false, features = ["tls-rustls-no-provider"] }
+clap = { version = "4.6.9", features = ["derive"] }
+futures-util = "0.3.34"
+glam = "0.34.3"
+rcgen = "0.14.10"
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+serde_json = "1.0.154"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[dev-dependencies]
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }
+
+[package.metadata.deb]
+maintainer = "spacemouse-onshape contributors"
+copyright = "The spacemouse-onshape contributors"
+license-file = ["LICENSE-MIT", "0"]
+depends = "$auto, libnss3-tools"
+section = "utils"
+priority = "optional"
+extended-description = """\
+Lets Onshape, in the browser, use a 3Dconnexion SpaceMouse on Linux. It stands in for the \
+local server that 3Dconnexion's driver provides on Windows and macOS, reading the device \
+directly through hidraw. Installs a udev rule for device access and a systemd user service \
+that starts at login and makes browsers trust its local, loopback-only certificate."""
+maintainer-scripts = "packaging/deb/"
+assets = [
+    ["target/release/spacemouse-onshape", "usr/bin/", "755"],
+    ["packaging/70-spacemouse.rules", "usr/lib/udev/rules.d/", "644"],
+    ["packaging/deb/spacemouse-onshape.service", "usr/lib/systemd/user/", "644"],
+    ["extension/manifest.json", "usr/share/spacemouse-onshape/extension/", "644"],
+    ["extension/platform.js", "usr/share/spacemouse-onshape/extension/", "644"],
+    ["extension/onshape-spacemouse.user.js", "usr/share/spacemouse-onshape/", "644"],
+    ["README.md", "usr/share/doc/spacemouse-onshape/", "644"],
+]
+
+[profile.release]
+lto = "thin"
+strip = true
